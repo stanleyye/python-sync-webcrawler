@@ -1,73 +1,64 @@
-import time
-import urllib
+#!/usr/bin/env python
+
+import argparse
+import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
 
-urlInput = "http://" + input("Please enter an url (without the http:// in front): ")
+linksVisited = {}
 
-# Keeps track of real time although not really accurate
-startTime = time.time()
+def crawl(aLink, originalBaseUrl):
 
-req = Request(urlInput)
-try:
-    response = urlopen(req)
-except HTTPError as e:
-    print('The server couldn\'t fulfill the request.')
-    print('Error code: ', e.code)
-    exit()
-except URLError as e:
-    print('We failed to reach a server.')
-    print('Reason: ', e.reason)
-    exit()
-else:
-    print('We are now going to scrap the url at', urlInput, 'works!')
-    print("Status:", response.status, response.reason)
+    try:
+        req = requests.get(aLink)
+    except requests.exceptions.RequestException as e:
+        print e
+        exit()
 
-baseUrl = urlInput
+    soup = BeautifulSoup(req.read())
 
-soup = BeautifulSoup(response.read())
+    for link in soup.find_all('a'):
+    	if (link.get('href').startswith("http")):
+    		print (link.get('href'))
 
-for link in soup.find_all('a'): 
+    		try:
+                linkReq = requests.get(link.get('href'))
+    		except requests.exceptions.RequestException as e:
+    		    print("The server couldn't fulfill the request for link:", link.get('href'), "Status:", e)
+            else:
+                if (linksVisited[link.get('href')] or (not(aLink.startswith(originalBaseUrl)))):
+                    pass
+                else:
+                    linksVisited[link.get('href')] = 1
+                    print(link.get('href'), "Status:", linkReq.status_code)
+                    crawl(link.get('href'), originalBaseUrl)
 
-	if (link.get('href').startswith("http")): 
+    	elif (link.get('href').startswith("javascript:")):
+    		pass
 
-		print (link.get('href'))
+    	else:
+    		linkFullUrl = urlparse.urljoin(originalBaseUrl, link.get('href'))
+            print(linkFullUrl)
 
-		linkReq = Request(link.get('href'))
-		try:
-		    linkResponse = urlopen(linkReq)
-		except (HTTPError, URLError) as e:
-		    print('The server couldn\'t fulfill the request for link:', link.get('href'),
-		    	"Status:", e.code, e.reason)
-		    exit()
-		else:
-		    print('The url to', link.get('href'), 'currently works.')
-		    print("Status:", linkResponse.status, linkResponse.reason)
-
-	elif (link.get('href').startswith("javascript:")): 
-		pass
-
-	else : 
-		linkFullUrl = (urljoin(baseUrl, link.get('href')))
-		print (linkFullUrl)
-
-		linkReq = Request(linkFullUrl)
-
-		try:
-		    linkResponse = urlopen(linkReq)
-		except (HTTPError, URLError) as e:
-		    print('The server couldn\'t fulfill the request for link:', linkFullUrl,
-		    	"Status:", e.code, e.reason)
-		    exit()
-		else:
-		    print('The url to', linkFullUrl, 'currently works.')
-		    print("Status:", linkResponse.status, linkResponse.reason)
-
-
-print("And now we are done!")
-print("It took a total of %s real-time seconds" % (time.time() - startTime))
+    		try:
+                linkReq = requests.get(linkFullUrl)
+    		except requests.exceptions.RequestException as e:
+    		    print("The server couldn't fulfill the request for link:", linkFullUrl, "Status:", e)
+            else:
+                if (linksVisited[linkFullUrl] or (not(linkFullUrl.startswith(originalBaseUrl)))):
+                    pass
+                else:
+                    linksVisited[link.get('href')] = 1
+                    print(link.get('href'), "Status:", linkReq.status_code)
+                    crawl(linkFullUrl, originalBaseUrl)
 
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process a domain.")
+    parser.add_argument("link")
+    args = parser.parse_args()
+    if (args.link.startswith("http://") or args.link.startswith("https://")):
+        crawl(args.link, args.link)
+    else:
+        crawl("http://" + args.link, "http://" + args.link)
