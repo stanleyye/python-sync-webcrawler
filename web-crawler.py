@@ -77,4 +77,5 @@ if __name__ == '__main__':
         crawl(args.link, args.link)
     else:
         crawl("http://" + args.link, "http://" + args.link)
-    print("There is a total of", len(linksVisited), "links and sources on this domain")
+    print("There is a total of", len(linksVisited),
+          "links and sources on this domain")
