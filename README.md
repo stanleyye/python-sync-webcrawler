@@ -1,4 +1,3 @@
-Synchronous Web crawler using Python 3
-======================================
-
-A python script that recursively checks the statuses of all links on a given webpage 
+Asynchronous and Synchronous Web crawler 
+========================================
+Python scripts that recursively checks the statuses of all links on a given webpage 
